@@ -20,6 +20,7 @@
 #include "lobject.h"
 #include "lstate.h"
 #include "lstring.h"
+#include "lshrtbl.h"
 
 
 #define MEMERRMSG       "not enough memory"
@@ -55,6 +56,7 @@ unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
   return h;
 }
 
+#if 0
 
 /*
 ** resizes the string table
@@ -86,6 +88,7 @@ void luaS_resize (lua_State *L, int newsize) {
   tb->size = newsize;
 }
 
+#endif
 
 /*
 ** Clear API string cache. (Entries cannot be empty, so fill them with
@@ -106,7 +109,7 @@ void luaS_clearcache (global_State *g) {
 void luaS_init (lua_State *L) {
   global_State *g = G(L);
   int i;
-  luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
+//  luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   /* pre-create memory-error message */
   g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
   luaC_fix(L, obj2gco(g->memerrmsg));  /* it should never be collected */
@@ -134,6 +137,8 @@ static TString *createstrobj (lua_State *L, const char *str, size_t l,
   return ts;
 }
 
+#if 0
+// Move to lshrtbl.c
 
 void luaS_remove (lua_State *L, TString *ts) {
   stringtable *tb = &G(L)->strt;
@@ -143,7 +148,6 @@ void luaS_remove (lua_State *L, TString *ts) {
   *p = (*p)->u.hnext;  /* remove element from its list */
   tb->nuse--;
 }
-
 
 /*
 ** checks whether short string exists and reuses it or creates a new one
@@ -174,13 +178,14 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   return ts;
 }
 
+#endif
 
 /*
 ** new string (with explicit length)
 */
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   if (l <= LUAI_MAXSHORTLEN)  /* short string? */
-    return internshrstr(L, str, l);
+    return luaS_newshr(L, str,l);
   else {
     TString *ts;
     if (l + 1 > (MAX_SIZE - sizeof(TString))/sizeof(char))

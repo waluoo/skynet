@@ -2,6 +2,7 @@ local skynet = require "skynet"
 local core = require "skynet.core"
 require "skynet.manager"	-- import manager apis
 local string = string
+local cmem = require "memory"
 
 local services = {}
 local command = {}
@@ -48,10 +49,14 @@ function command.MEM()
 end
 
 function command.GC()
+	local gen = cmem.ssversion()
 	for k,v in pairs(services) do
 		skynet.send(k,"debug","GC")
 	end
-	return command.MEM()
+	local s = cmem.sscollect(gen)
+	local ret = command.MEM()
+	ret.collectstring = s
+	return ret
 end
 
 function command.REMOVE(_, handle, kill)

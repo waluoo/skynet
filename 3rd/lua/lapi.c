@@ -29,6 +29,7 @@
 #include "lundump.h"
 #include "lvm.h"
 #include "lfunc.h"
+#include "lshrtbl.h"
 
 
 
@@ -1000,7 +1001,12 @@ static Proto * cloneproto (lua_State *L, const Proto *src) {
     const TValue *s=&src->k[i];
     TValue *o=&f->k[i];
     if (ttisstring(s)) {
-      TString * str = luaS_newlstr(L,svalue(s),vslen(s));
+      TString * str;
+      if (ttisshrstring(s)) {
+        str = tsvalue(s);
+      } else {
+        str = luaS_newlstr(L,svalue(s),vslen(s));
+      }
       setsvalue2n(L,o,str);
     } else {
       setobj(L,o,s);

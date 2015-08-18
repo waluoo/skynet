@@ -1,4 +1,5 @@
 #include "skynet.h"
+#include "luashrtbl.h"
 
 #include <lua.h>
 #include <lualib.h>
@@ -148,6 +149,7 @@ snlua_create(void) {
 	struct snlua * l = skynet_malloc(sizeof(*l));
 	memset(l,0,sizeof(*l));
 	l->L = lua_newstate(skynet_lalloc, NULL);
+	luaS_initshrversion(l->L);
 	return l;
 }
 

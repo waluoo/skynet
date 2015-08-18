@@ -24,6 +24,7 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
+#include "lshrtbl.h"
 
 
 /*
@@ -187,6 +188,10 @@ void luaC_upvalbarrier_ (lua_State *L, UpVal *uv) {
 
 
 void luaC_fix (lua_State *L, GCObject *o) {
+  if (o->tt == LUA_TSHRSTR) {
+     // short string don't need fix
+     return;
+  }
   global_State *g = G(L);
   lua_assert(g->allgc == o);  /* object must be 1st in 'allgc' list! */
   white2gray(o);  /* they will be gray forever */
@@ -232,8 +237,9 @@ static void reallymarkobject (global_State *g, GCObject *o) {
   white2gray(o);
   switch (o->tt) {
     case LUA_TSHRSTR: {
-      gray2black(o);
-      g->GCmemtrav += sizelstring(gco2ts(o)->shrlen);
+//      gray2black(o);
+//      g->GCmemtrav += sizelstring(gco2ts(o)->shrlen);
+      luaS_markshr(gco2ts(o));
       break;
     }
     case LUA_TLNGSTR: {
@@ -707,10 +713,10 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TTABLE: luaH_free(L, gco2t(o)); break;
     case LUA_TTHREAD: luaE_freethread(L, gco2th(o)); break;
     case LUA_TUSERDATA: luaM_freemem(L, o, sizeudata(gco2u(o))); break;
-    case LUA_TSHRSTR:
-      luaS_remove(L, gco2ts(o));  /* remove it from hash table */
-      luaM_freemem(L, o, sizelstring(gco2ts(o)->shrlen));
-      break;
+//    case LUA_TSHRSTR:
+//      luaS_remove(L, gco2ts(o));  /* remove it from hash table */
+//      luaM_freemem(L, o, sizelstring(gco2ts(o)->shrlen));
+//      break;
     case LUA_TLNGSTR: {
       luaM_freemem(L, o, sizelstring(gco2ts(o)->u.lnglen));
       break;
@@ -781,8 +787,8 @@ static void checkSizes (lua_State *L, global_State *g) {
   if (g->gckind != KGC_EMERGENCY) {
     l_mem olddebt = g->GCdebt;
     luaZ_freebuffer(L, &g->buff);  /* free concatenation buffer */
-    if (g->strt.nuse < g->strt.size / 4)  /* string table too big? */
-      luaS_resize(L, g->strt.size / 2);  /* shrink it a little */
+//    if (g->strt.nuse < g->strt.size / 4)  /* string table too big? */
+//      luaS_resize(L, g->strt.size / 2);  /* shrink it a little */
     g->GCestimate += g->GCdebt - olddebt;  /* update estimate */
   }
 }
@@ -979,7 +985,7 @@ void luaC_freeallobjects (lua_State *L) {
   sweepwholelist(L, &g->finobj);
   sweepwholelist(L, &g->allgc);
   sweepwholelist(L, &g->fixedgc);  /* collect fixed objects */
-  lua_assert(g->strt.nuse == 0);
+//  lua_assert(g->strt.nuse == 0);
 }
 
 
@@ -1050,7 +1056,8 @@ static lu_mem singlestep (lua_State *L) {
   global_State *g = G(L);
   switch (g->gcstate) {
     case GCSpause: {
-      g->GCmemtrav = g->strt.size * sizeof(GCObject*);
+//      g->GCmemtrav = g->strt.size * sizeof(GCObject*);
+      g->GCmemtrav = 0;
       restartcollection(g);
       g->gcstate = GCSpropagate;
       return g->GCmemtrav;
